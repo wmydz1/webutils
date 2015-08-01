@@ -1,4 +1,18 @@
-package webutils
+// Copyright 2014 beego Author. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pagination
 
 import (
 	"fmt"
@@ -9,19 +23,6 @@ import (
 	"strconv"
 )
 
-// Pagintor 包含了 http request.
-type Paginator struct {
-	Request     *http.Request
-	PerPageNums int
-	MaxPages    int
-
-	nums      int64
-	pageRange []int
-	pageNums  int
-	page      int
-}
-
-// 转换其他类型到 int64
 func ToInt64(value interface{}) (d int64, err error) {
 	val := reflect.ValueOf(value)
 	switch value.(type) {
@@ -35,7 +36,19 @@ func ToInt64(value interface{}) (d int64, err error) {
 	return
 }
 
-// 返回总共的页数
+// Paginator within the state of a http request.
+type Paginator struct {
+	Request     *http.Request
+	PerPageNums int
+	MaxPages    int
+
+	nums      int64
+	pageRange []int
+	pageNums  int
+	page      int
+}
+
+// Returns the total number of pages.
 func (p *Paginator) PageNums() int {
 	if p.pageNums != 0 {
 		return p.pageNums
@@ -48,17 +61,17 @@ func (p *Paginator) PageNums() int {
 	return p.pageNums
 }
 
-//返回子项的个数
+// Returns the total number of items (e.g. from doing SQL count).
 func (p *Paginator) Nums() int64 {
 	return p.nums
 }
 
-// 设置子项的个数
+// Sets the total number of items.
 func (p *Paginator) SetNums(nums interface{}) {
 	p.nums, _ = ToInt64(nums)
 }
 
-// 返回当前的页
+// Returns the current page.
 func (p *Paginator) Page() int {
 	if p.page != 0 {
 		return p.page
@@ -76,14 +89,15 @@ func (p *Paginator) Page() int {
 	return p.page
 }
 
-// 返回全部页数的计划
-// 使用方法
+// Returns a list of all pages.
+//
+// Usage (in a view template):
+//
 //  {{range $index, $page := .paginator.Pages}}
 //    <li{{if $.paginator.IsActive .}} class="active"{{end}}>
 //      <a href="{{$.paginator.PageLink $page}}">{{$page}}</a>
 //    </li>
 //  {{end}}
-
 func (p *Paginator) Pages() []int {
 	if p.pageRange == nil && p.nums > 0 {
 		var pages []int
@@ -113,7 +127,7 @@ func (p *Paginator) Pages() []int {
 	return p.pageRange
 }
 
-// 根据请求返回 URL
+// Returns URL for a given page index.
 func (p *Paginator) PageLink(page int) string {
 	link, _ := url.ParseRequestURI(p.Request.URL.String())
 	values := link.Query()
@@ -126,7 +140,7 @@ func (p *Paginator) PageLink(page int) string {
 	return link.String()
 }
 
-// 返回上一页
+// Returns URL to the previous page.
 func (p *Paginator) PageLinkPrev() (link string) {
 	if p.HasPrev() {
 		link = p.PageLink(p.Page() - 1)
@@ -134,7 +148,7 @@ func (p *Paginator) PageLinkPrev() (link string) {
 	return
 }
 
-// 返回下一页
+// Returns URL to the next page.
 func (p *Paginator) PageLinkNext() (link string) {
 	if p.HasNext() {
 		link = p.PageLink(p.Page() + 1)
@@ -142,42 +156,42 @@ func (p *Paginator) PageLinkNext() (link string) {
 	return
 }
 
-// 返回第一页
+// Returns URL to the first page.
 func (p *Paginator) PageLinkFirst() (link string) {
 	return p.PageLink(1)
 }
 
-// 返回最后一页
+// Returns URL to the last page.
 func (p *Paginator) PageLinkLast() (link string) {
 	return p.PageLink(p.PageNums())
 }
 
-// 检查当前页是否有上一页
+// Returns true if the current page has a predecessor.
 func (p *Paginator) HasPrev() bool {
 	return p.Page() > 1
 }
 
-// 检查当前页是否有下一页
+// Returns true if the current page has a successor.
 func (p *Paginator) HasNext() bool {
 	return p.Page() < p.PageNums()
 }
 
-// 检查当前页数是不是指向该页
+// Returns true if the given page index points to the current page.
 func (p *Paginator) IsActive(page int) bool {
 	return p.Page() == page
 }
 
-// 返回当前的偏移量
+// Returns the current offset.
 func (p *Paginator) Offset() int {
 	return (p.Page() - 1) * p.PerPageNums
 }
 
-// 返回页数是否超过一页
+// Returns true if there is more than one page.
 func (p *Paginator) HasPages() bool {
 	return p.PageNums() > 1
 }
 
-// 实例化
+// Instantiates a paginator struct for the current http request.
 func NewPaginator(req *http.Request, per int, nums interface{}) *Paginator {
 	p := Paginator{}
 	p.Request = req
